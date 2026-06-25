@@ -24,7 +24,7 @@ export function Hero() {
               <span className="absolute inset-0 animate-pulse-ring rounded-full bg-emerald" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald" />
             </span>
-            Available for new projects · Nairobi, Kenya
+            Available for new projects worldwide
           </div>
 
           <h1 className="mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.25rem]">
