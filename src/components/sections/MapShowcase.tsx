@@ -1,6 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useMemo, useState } from "react";
 import { PROJECTS } from "./Projects";
 import { Layers3, Filter, Globe2 } from "lucide-react";
 
@@ -14,12 +12,35 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const FILTERS = ["All", "Land Administration", "Planning", "Infrastructure", "Surveying"] as const;
 
+type LeafletMods = {
+  MapContainer: typeof import("react-leaflet").MapContainer;
+  TileLayer: typeof import("react-leaflet").TileLayer;
+  CircleMarker: typeof import("react-leaflet").CircleMarker;
+  Popup: typeof import("react-leaflet").Popup;
+  Tooltip: typeof import("react-leaflet").Tooltip;
+};
+
 export function MapShowcase() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [basemap, setBasemap] = useState<"streets" | "satellite" | "dark">("dark");
-  const [mounted, setMounted] = useState(false);
+  const [leaflet, setLeaflet] = useState<LeafletMods | null>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    let active = true;
+    Promise.all([import("react-leaflet"), import("leaflet/dist/leaflet.css")]).then(([rl]) => {
+      if (!active) return;
+      setLeaflet({
+        MapContainer: rl.MapContainer,
+        TileLayer: rl.TileLayer,
+        CircleMarker: rl.CircleMarker,
+        Popup: rl.Popup,
+        Tooltip: rl.Tooltip,
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const projects = useMemo(
     () => (filter === "All" ? PROJECTS : PROJECTS.filter((p) => p.category === filter)),
@@ -27,10 +48,7 @@ export function MapShowcase() {
   );
 
   const tile = {
-    streets: {
-      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      attr: "© OpenStreetMap",
-    },
+    streets: { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: "© OpenStreetMap" },
     satellite: {
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       attr: "Tiles © Esri",
@@ -59,25 +77,22 @@ export function MapShowcase() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur">
-              {(["streets", "satellite", "dark"] as const).map((b) => (
-                <button
-                  key={b}
-                  onClick={() => setBasemap(b)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition ${
-                    basemap === b ? "bg-gradient-accent text-white" : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  {b}
-                </button>
-              ))}
-            </div>
+          <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur">
+            {(["streets", "satellite", "dark"] as const).map((b) => (
+              <button
+                key={b}
+                onClick={() => setBasemap(b)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition ${
+                  basemap === b ? "bg-gradient-accent text-white" : "text-white/70 hover:text-white"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-[260px_1fr]">
-          {/* Sidebar dashboard */}
           <aside className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white/60">
               <Filter className="h-3.5 w-3.5" /> Filters
@@ -118,18 +133,17 @@ export function MapShowcase() {
             </div>
           </aside>
 
-          {/* Map */}
           <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-elevated">
-            {mounted && (
-              <MapContainer
+            {leaflet ? (
+              <leaflet.MapContainer
                 center={[-0.6, 37.5]}
                 zoom={6}
                 scrollWheelZoom={false}
                 style={{ height: 540, width: "100%", background: "#0F172A" }}
               >
-                <TileLayer key={basemap} url={tile.url} attribution={tile.attr} />
+                <leaflet.TileLayer key={basemap} url={tile.url} attribution={tile.attr} />
                 {projects.map((p) => (
-                  <CircleMarker
+                  <leaflet.CircleMarker
                     key={p.title + p.client}
                     center={p.coords}
                     radius={9}
@@ -140,25 +154,32 @@ export function MapShowcase() {
                       weight: 2,
                     }}
                   >
-                    <Tooltip direction="top" offset={[0, -8]} opacity={1}>
+                    <leaflet.Tooltip direction="top" offset={[0, -8]} opacity={1}>
                       <strong>{p.client}</strong>
                       <br />
                       <span style={{ fontSize: 11 }}>{p.category}</span>
-                    </Tooltip>
-                    <Popup>
+                    </leaflet.Tooltip>
+                    <leaflet.Popup>
                       <div style={{ minWidth: 220 }}>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "#2563EB", fontWeight: 700 }}>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            textTransform: "uppercase",
+                            letterSpacing: 1,
+                            color: "#2563EB",
+                            fontWeight: 700,
+                          }}
+                        >
                           {p.client}
                         </div>
                         <div style={{ fontWeight: 700, marginTop: 2, fontSize: 14 }}>{p.title}</div>
                         <p style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>{p.description}</p>
                       </div>
-                    </Popup>
-                  </CircleMarker>
+                    </leaflet.Popup>
+                  </leaflet.CircleMarker>
                 ))}
-              </MapContainer>
-            )}
-            {!mounted && (
+              </leaflet.MapContainer>
+            ) : (
               <div className="grid h-[540px] place-items-center bg-navy/60 text-white/50">Loading map…</div>
             )}
           </div>
