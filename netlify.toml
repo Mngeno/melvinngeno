@@ -1,6 +1,0 @@
-[build]
-  command = "bun run build"
-  publish = ".netlify/images"
-
-[build.environment]
-  NITRO_PRESET = "netlify"
